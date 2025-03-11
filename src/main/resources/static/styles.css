@@ -1,0 +1,30 @@
+/*globale variabler*/
+:root{
+    --maincolor: #C3C49E;
+    --textcolor: black;
+    --navColor: #8F7E4F;
+}
+
+body{
+    font-family: 'Segoe UI', Tahoma, sans-serif;
+    background-color: var(--maincolor);
+    color: var(--textcolor);
+    margin: 0;
+    /*evt tekst/linje høyde(padding)*/
+}
+
+.navbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: var(--navColor);
+    padding: 15px 30px;
+    border-bottom: solid black;
+}
+
+.menu {
+    list-style-type: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+}
