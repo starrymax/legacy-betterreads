@@ -32,6 +32,11 @@ public class Book {
     @Column(name = "ISBN", nullable = false, unique = true)
     private String ISBN;
 
+    private String description;
+
+    @Column(name = "genre")
+    private String Genre;
+
     @NotNull
     @Column(name = "Cover_URL")
     private String coverURL;
@@ -113,6 +118,23 @@ public class Book {
         this.lastSync = Sist_synced;
     }
 
+    public void setLastSync(LocalDateTime now) {
+        this.lastSync = now;
+    }
 
+    public String getDescription(){
+        return description;
+    }
 
+    public void setDescription(String description){
+        this.description = description;
+    }
+
+    public void setGenre (String Genre){
+        this.Genre = Genre;
+    }
+
+    public String getGenre(){
+        return Genre;
+    }
 }
