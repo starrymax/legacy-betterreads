@@ -66,25 +66,12 @@
     <h2>Trending</h2>
     <div class="scoll-container">
         <div class="liste">
-            <button class="scroll-btn left" onclick="scrollLeft()">
+            <button class="scroll-btn left">
                 <i class="material-symbols-outlined">chevron_left</i>
             </button>
             <!-- TODO lag denne listen -->
-
-<!--            <img th:each="book : ${books}" th:src="${book.coverURL}" th:alt="${book.title}">-->
-            <img src="../static/images/covertemplate.jpg" alt="template">
-            <img src="../static/images/covertemplate.jpg" alt="template">
-            <img src="../static/images/covertemplate.jpg" alt="template">
-            <img src="../static/images/covertemplate.jpg" alt="template">
-            <img src="../static/images/covertemplate.jpg" alt="template">
-            <img src="../static/images/covertemplate.jpg" alt="template">
-            <img src="../static/images/covertemplate.jpg" alt="template">
-            <img src="../static/images/covertemplate.jpg" alt="template">
-            <img src="../static/images/covertemplate.jpg" alt="template">
-            <img src="../static/images/covertemplate.jpg" alt="template">
-            <img src="../static/images/covertemplate.jpg" alt="template">
-            <img src="../static/images/covertemplate.jpg" alt="template">
-            <button class="scroll-btn right" onclick="scrollRight()">
+            <img th:each="book : ${books}" th:src="${book.coverURL}" th:alt="${book.title}">
+            <button class="scroll-btn right">
                 <i class="material-symbols-outlined">chevron_right</i>
             </button>
         </div>

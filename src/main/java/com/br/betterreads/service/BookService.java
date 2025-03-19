@@ -16,13 +16,4 @@ public class BookService {
         this.bookRepo = bookRepo;
     }
 
-    public List<Book> fetchTrending() {
-        String query = "https://openlibrary.org/trending/monthly.json";
-
-
-
-
-        return new ArrayList<>();
-    }
-
 }

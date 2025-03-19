@@ -47,22 +47,22 @@ public class ApiService {
         return bookMapper.convertToBook(bookDTO, isbn);
     }
 
-//    public List<Book> fetchTrendingBooks(int limit) {
-//        String apiUrl = "https://openlibrary.org/trending/monthly.json?limit=" + limit;
-//
-//        ResponseEntity<OpenLibraryTrendingResponse> response = restTemplate.exchange(
-//                apiUrl,
-//                HttpMethod.GET,
-//                null,
-//                OpenLibraryTrendingResponse.class
-//        );
-//
-//        if(response.getBody() == null || response.getBody().getWorks() == null) {
-//            return List.of();
-//        }
-//
-//        return response.getBody().getWorks().stream()
-//                .map(bookMapper::convertTrendingBook)
-//                .toList();
-//    }
+    public List<Book> fetchTrendingBooks(int limit) {
+        String apiUrl = "https://openlibrary.org/trending/weekly.json?limit=" + limit;
+
+        ResponseEntity<OpenLibraryTrendingResponse> response = restTemplate.exchange(
+                apiUrl,
+                HttpMethod.GET,
+                null,
+                OpenLibraryTrendingResponse.class
+        );
+
+        if(response.getBody() == null || response.getBody().getWorks() == null) {
+            return List.of();
+        }
+
+        return response.getBody().getWorks().stream()
+                .map(bookMapper::convertTrendingBook)
+                .toList();
+    }
 }

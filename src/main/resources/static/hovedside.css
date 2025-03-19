@@ -85,7 +85,7 @@
     display: none;
 }
 .liste img {
-    height: 40vh;
+    height: auto;
     width: auto;
     flex: 0 0 auto;
     object-fit: cover;
@@ -99,14 +99,13 @@
 .scroll-btn {
     position: absolute;
     z-index: 10;
-    border-radius: 50%;
     background-color: transparent;
     border: none;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    top: 60%;
+    top: 35%;
 }
 
 .scroll-btn.left {

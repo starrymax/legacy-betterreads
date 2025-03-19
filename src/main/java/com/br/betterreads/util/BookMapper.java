@@ -5,6 +5,7 @@ import com.br.betterreads.model.Book;
 import com.br.betterreads.model.OpenLibraryTrendingResponse;
 import org.springframework.stereotype.Component;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -37,10 +38,21 @@ public class BookMapper {
                 .collect(Collectors.joining(", "));
     }
 
-//    public Object convertTrendingBook(OpenLibraryTrendingResponse.TrendingBook trendingBook) {
-//        Book book = new Book();
-//        book.setTitle(trendingBook.getTitle());
-//        book.setAuthor(trendingBook.getAuthorNames());
-//        book.setPublicationYear(trendingBook.getFirstPublishedYear());
-//    }
+    public Book convertTrendingBook(OpenLibraryTrendingResponse.TrendingBook trendingBook) {
+        Book book = new Book();
+        book.setTitle(trendingBook.getTitle());
+
+        List<String> authorNames = trendingBook.getAuthor_name();
+        if(authorNames != null && !authorNames.isEmpty()) {
+            book.setAuthor(String.join(", ", authorNames));
+        } else {
+            book.setAuthor("Unknown");
+        }
+
+        book.setPublicationYear(trendingBook.getFirst_published_year());
+        book.setCoverURL(trendingBook.getCoverUrl());
+        book.setLastSync(LocalDateTime.now());
+
+        return book;
+    }
 }
