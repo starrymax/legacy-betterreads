@@ -250,8 +250,8 @@ public class Book {
         return subtitle;
     }
 
-    public void setSubtitle(@NotNull String subtitle) {
-        subtitle = subtitle;
+    public void setSubtitle(String subtitle) {
+        this.subtitle = subtitle;
     }
 
     public Integer getPublicationYear() {

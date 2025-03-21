@@ -16,6 +16,9 @@ public class BookMapper {
     public Book convertToBook(OpenLibraryApi dto, String isbn) {
         Book book = new Book();
         book.setTitle(dto.getTitle());
+        if (dto.getSubtitle() != null) {
+            book.setSubtitle(dto.getSubtitle());
+        }
         book.setAuthor(formatAuthors(dto.getAuthors()));
         book.setIsbn(isbn);
         book.setCoverURL(dto.getCover() != null ? dto.getCover().getMedium() : null);

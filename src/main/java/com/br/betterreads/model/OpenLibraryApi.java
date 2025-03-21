@@ -7,6 +7,8 @@ import java.util.List;
 public class OpenLibraryApi {
     private String title;
 
+    private String subtitle;
+
     private String url;
 
     @JsonProperty("authors")
@@ -25,6 +27,14 @@ public class OpenLibraryApi {
 
     public String getTitle() { return title; }
     public void setTitle(String title) { this.title = title; }
+
+    public String getSubtitle() {
+        return subtitle;
+    }
+
+    public void setSubtitle(String subtitle) {
+        this.subtitle = subtitle;
+    }
 
     public List<OpenLibraryAuthorDTO> getAuthors() { return authors; }
     public void setAuthors(List<OpenLibraryAuthorDTO> authors) { this.authors = authors; }

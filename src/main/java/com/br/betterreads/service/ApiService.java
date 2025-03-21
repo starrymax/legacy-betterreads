@@ -87,6 +87,12 @@ public class ApiService {
                                     String description = getDescription(descObj);
                                     book = bookMapper.updateBookWithDescription(book, description);
                                 }
+
+                                if (workDetails != null && workDetails.containsKey("subtitle")) {
+                                    Object subtitleObj = workDetails.get("subtitle");
+                                    String subtitle = getSubtitle(subtitleObj);
+                                    book.setSubtitle(subtitle);
+                                }
                             }
                         }
                     }
@@ -111,6 +117,18 @@ public class ApiService {
             return valueObj instanceof String ? (String) valueObj : "No description available";
         }
         return "No description available";
+    }
+
+    private static String getSubtitle(Object subtitleObj) {
+        if (subtitleObj instanceof String) {
+            return (String) subtitleObj;
+        } else if (subtitleObj instanceof Map) {
+            @SuppressWarnings("unchecked")
+            Map<String, Object> subtitleMap = (Map<String, Object>) subtitleObj;
+            Object valueObj = subtitleMap.get("value");
+            return valueObj instanceof String ? (String) valueObj : null;
+        }
+        return null;
     }
 
 
