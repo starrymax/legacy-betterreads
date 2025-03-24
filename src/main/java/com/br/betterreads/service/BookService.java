@@ -1,9 +1,13 @@
 package com.br.betterreads.service;
 
 import com.br.betterreads.model.Book;
+import com.br.betterreads.model.OpenLibraryTrendingResponse;
 import com.br.betterreads.repository.BookRepository;
+import com.br.betterreads.util.BookMapper;
+import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -11,14 +15,18 @@ import java.util.Optional;
 @Service
 public class BookService {
 
+    private static final long CACHE_DURATION_HOURS = 24;
     private final BookRepository bookRepo;
     private final ApiService apiService;
+    private final BookMapper bookMapper;
 
-    public BookService(BookRepository bookRepo, ApiService apiService) {
+    public BookService(BookRepository bookRepo, ApiService apiService, BookMapper bookMapper) {
         this.bookRepo = bookRepo;
         this.apiService = apiService;
+        this.bookMapper = bookMapper;
     }
 
+    @Transactional
     public Book searchBookByIsbn(String isbn) {
         Optional<Book> bookOpt = bookRepo.findByIsbn(isbn);
         if (bookOpt.isPresent()) {
@@ -33,6 +41,7 @@ public class BookService {
         }
     }
 
+    @Transactional
     public List<Book> searchBooksByTitle(String title) {
         List<Book> books = bookRepo.findByTitle(title);
         if (books.isEmpty()) {
@@ -45,6 +54,7 @@ public class BookService {
         return books;
     }
 
+    @Transactional
     public List<Book> searchBooksByAuthor(String author) {
         List<Book> books = bookRepo.findBookByAuthor(author);
         if (books.isEmpty()) {
@@ -57,6 +67,7 @@ public class BookService {
         return books;
     }
 
+    @Transactional
     public List<Book> searchBooks(String query, String searchType) {
         return switch (searchType) {
             case "title" -> searchBooksByTitle(query);
@@ -68,4 +79,33 @@ public class BookService {
             default -> List.of();
         };
     }
+
+    @Transactional
+    public List<Book> displayTrending(int limit) {
+        List<Book> cachedBooks = bookRepo.findByLastSyncAfterAndTrendingTrue(
+                LocalDateTime.now().minusHours(CACHE_DURATION_HOURS)
+        );
+
+        if (!cachedBooks.isEmpty()) {
+            return cachedBooks.subList(0, Math.min(limit, cachedBooks.size()));
+        }
+
+        List<OpenLibraryTrendingResponse.TrendingBook> trendingBooks = apiService.fetchTrendingBooks(limit);
+        if (!trendingBooks.isEmpty()) {
+            bookRepo.resetTrendingFlags();
+            List<Book> books = trendingBooks.stream()
+                    .map(trendingBook -> {
+                        Book book = bookMapper.convertTrendingBook(trendingBook);
+                        String workId = trendingBook.getKey().replace("/works/", "");
+                        book.setIsbn(workId);
+                        book.setTrending(true);
+                        book.setLastSync(LocalDateTime.now());
+                        return book;
+                    })
+                    .toList();
+            return bookRepo.saveAll(books);
+        }
+        return new ArrayList<>();
+    }
+
 }

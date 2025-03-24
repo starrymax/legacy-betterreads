@@ -41,8 +41,7 @@ public class Book {
     /**
      * Title of the book.
      */
-    @NotNull
-    @Column(name = "subtitle", nullable = false)
+    @Column(name = "subtitle")
     private String subtitle;
 
 
@@ -92,6 +91,10 @@ public class Book {
     @NotNull(message = "Field is required")
     @Column(name = "last_sync", nullable = false)
     private LocalDateTime lastSync;
+
+
+    @NotNull
+    private boolean trending;
 
 
     // Constructors
@@ -298,6 +301,15 @@ public class Book {
      */
     public void setLastSync(LocalDateTime lastSync) {
         this.lastSync = lastSync;
+    }
+
+
+    public boolean isTrending() {
+        return trending;
+    }
+
+    public void setTrending(boolean trending) {
+        this.trending = trending;
     }
 
     //toString

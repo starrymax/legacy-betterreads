@@ -99,7 +99,7 @@ public class UserController {
             model.addAttribute("username", loggedInUser.getUsername());
         }
 
-        List<Book> trendingBooks = apiService.fetchTrendingBooks(12);
+        List<Book> trendingBooks = bookService.displayTrending(12);
         model.addAttribute("books", trendingBooks);
         return "BetterReads";
     }

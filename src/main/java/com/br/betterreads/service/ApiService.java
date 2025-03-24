@@ -340,7 +340,7 @@ public class ApiService {
     }
 
 
-    public List<Book> fetchTrendingBooks(int limit) {
+    public List<OpenLibraryTrendingResponse.TrendingBook> fetchTrendingBooks(int limit) {
         String apiUrl = "https://openlibrary.org/trending/weekly.json?limit=" + limit;
 
         ResponseEntity<OpenLibraryTrendingResponse> response = restTemplate.exchange(
@@ -354,8 +354,6 @@ public class ApiService {
             return List.of();
         }
 
-        return response.getBody().getWorks().stream()
-                .map(bookMapper::convertTrendingBook)
-                .toList();
+        return response.getBody().getWorks();
     }
 }
