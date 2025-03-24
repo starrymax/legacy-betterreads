@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Search Error - BetterReads</title>
+    <link rel="stylesheet" th:href="@{/styles.css}">
+</head>
+<body>
+<div th:insert="~{fragments :: header}"></div>
+
+<div class="search-error">
+    <h1>No Results Found</h1>
+    <p th:text="${error}">Error message</p>
+
+    <div class="search-again">
+        <h2>Try another search</h2>
+        <form action="/search" method="get">
+            <label>
+                <select name="searchType">
+                    <option value="title">Title</option>
+                    <option value="author">Author</option>
+                    <option value="isbn">ISBN</option>
+                </select>
+            </label>
+            <label>
+                <input type="search" name="query" placeholder="Search...">
+            </label>
+            <button type="submit">Search</button>
+        </form>
+    </div>
+</div>
+
+<div th:insert="~{fragments :: footer}"></div>
+</body>
+</html>

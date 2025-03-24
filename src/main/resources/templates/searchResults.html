@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Search Results - BetterReads</title>
+    <link rel="stylesheet"
+          href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&icon_names=account_circle,barcode_scanner,chevron_left,chevron_right,qr_code_scanner,search&display=swap"
+    >
+    <link rel="stylesheet" th:href="@{/styles.css}">
+    <link rel="stylesheet" th:href="@{/bookResult.css}">
+</head>
+<body>
+<div th:insert="~{fragments :: header}"></div>
+
+<div class="search-results">
+    <h1>Search Results for: <span th:text="${query}"></span></h1>
+
+    <div class="book-grid">
+        <div class="book-card" th:each="book : ${books}">
+            <a th:href="@{/book(isbn=${book.isbn})}">
+                <div class="book-cover">
+                    <img th:if="${book.coverURL != null && !book.coverURL.isEmpty()}"
+                         th:src="@{${book.coverURL}}" alt="Book cover">
+                    <img th:unless="${book.coverURL != null && !book.coverURL.isEmpty()}"
+                         th:src="@{/images/covertemplate.jpg}" alt="No cover available">
+                </div>
+                <div class="book-info">
+                    <h3 th:text="${book.title}"></h3>
+                    <p th:if="${book.subtitle}" th:text="${book.subtitle}"></p>
+                    <p th:text="${book.author}"></p>
+                </div>
+            </a>
+        </div>
+    </div>
+
+    <div th:if="${#lists.isEmpty(books)}">
+        <p>No books found matching your search criteria.</p>
+    </div>
+</div>
+
+<div th:insert="~{fragments :: footer}"></div>
+</body>
+</html>

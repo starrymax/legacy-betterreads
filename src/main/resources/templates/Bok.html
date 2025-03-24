@@ -2,82 +2,73 @@
 <html xmlns:th="http://www.thymeleaf.org" lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>BOK</title>
-    <link rel="stylesheet" th:href="@{/css/styles.css}">
-
+    <title th:text="${book.title}">Book Details</title>
+    <link rel="stylesheet"
+          href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&icon_names=account_circle,barcode_scanner,chevron_left,chevron_right,qr_code_scanner,search&display=swap">
+    <link rel="stylesheet" th:href="@{/styles.css}">
 </head>
-
 <body>
 <div th:insert="~{fragments :: header}"></div>
 
-<header th:fragment="header">
-    <nav class="navbar">
-        <span>&#9776;</span>
-        <h1><a href="Hovedside.html">BetterReads</a></h1>
-        <div class="sidebar">
-            <ul class="menu">
-                <li><a href="Hovedside.html">Home</a></li>
-                <li><a href="">My Books</a></li>
-                <li><a href="">Browse</a></li>
-            </ul>
-            <search class="searchbar-nav">
-                <form>
-                    <select aria-label="Search Filter Navbar" id="searchTypeNav">
-                        <option value="books">Books</option>
-                        <option value="authors">Authors</option>
-                    </select>
-                    <input aria-label="navsearch" id="navsearch" type="search" name="search" placeholder="Search...">
-                </form>
-            </search>
-        </div>
-        <a href="Signup.html">Register</a>
-        <a href="Login.html">Login</a>
-    </nav>
-</header>
-
-
-<h1><a href="Bok.html">Book</a></h1>
-
-<div>Dis yo book?</div>
-
-<img src="$ikke.lagt.inn.enda.jpeg" alt="Taynikma">
-
-
-<label for="fname"> User Review </label>
-<input type ="text" id = "fname" name="fname">
-<p><mark>MILK</mark></p>
-
-<fieldset class="star-rating">
-    <legend>Your rating:</legend>
-    <div>
-        <input type="radio" name="rating" value="1" id="rating1" />
-        <label for="rating1"><span>1</span></label>
-        <input type="radio" name="rating" value="2" id="rating2" />
-        <label for="rating2"><span>2</span></label>
-        <input type="radio" name="rating" value="3" id="rating3" />
-        <label for="rating3"><span>3</span></label>
-        <input type="radio" name="rating" value="4" id="rating4" />
-        <label for="rating4"><span>4</span></label>
-        <input type="radio" name="rating" value="5" id="rating5" />
-        <label for="rating5"><span>5</span></label>
+<div class="book-detail">
+    <div class="book-header">
+        <h1 th:text="${book.title}">Book Title</h1>
+        <h2 th:if="${book.subtitle}" th:text="${book.subtitle}">Subtitle</h2>
+        <h3 th:text="${book.author}">Author</h3>
     </div>
-</fieldset>
 
+    <div class="book-content">
+        <div class="book-cover">
+            <img th:if="${book.coverURL != null && !book.coverURL.isEmpty()}"
+                 th:src="@{${book.coverURL}}" alt="Book cover">
+            <img th:unless="${book.coverURL != null && !book.coverURL.isEmpty()}"
+                 th:src="@{/images/covertemplate.jpg}" alt="No cover available">
+        </div>
 
-<div>Handling: </div>
+        <div class="book-info">
+            <p><strong>ISBN:</strong> <span th:text="${book.isbn}">ISBN</span></p>
+            <p th:if="${book.genre}"><strong>Genre:</strong> <span th:text="${#strings.arrayJoin(book.genre, ', ')}">Genre</span></p>
+            <p th:if="${book.publicationYear}"><strong>Publication Year:</strong> <span th:text="${book.publicationYear}">Year</span></p>
 
-<label for="pname">Handling</label>
-<input type="text" id = "pname" name="Handling">
+            <div class="book-description">
+                <h4>Description</h4>
+                <p th:text="${book.description}">Description</p>
+            </div>
 
-<div>
-    <label for ="bookStatus">Book status:</label>
-    <select id = bookStatus name ="bookStatus">
-            <option value ="read">Read</option>
-            <option value="Currently reading">Currently reading</option>
-            <option value="to-read">to-read</option>
+            <fieldset class="star-rating">
+                <legend>Your rating:</legend>
+                <div>
+                    <input type="radio" name="rating" value="1" id="rating1" />
+                    <label for="rating1"><span>1</span></label>
+                    <input type="radio" name="rating" value="2" id="rating2" />
+                    <label for="rating2"><span>2</span></label>
+                    <input type="radio" name="rating" value="3" id="rating3" />
+                    <label for="rating3"><span>3</span></label>
+                    <input type="radio" name="rating" value="4" id="rating4" />
+                    <label for="rating4"><span>4</span></label>
+                    <input type="radio" name="rating" value="5" id="rating5" />
+                    <label for="rating5"><span>5</span></label>
+                </div>
+            </fieldset>
 
-    </select>
+            <div>
+                <label for="bookStatus">Book status:</label>
+                <select id="bookStatus" name="bookStatus">
+                    <option value="read">Read</option>
+                    <option value="Currently reading">Currently reading</option>
+                    <option value="to-read">to-read</option>
+                </select>
+            </div>
 
+            <div class="user-review">
+                <label for="userReview">Your Review</label>
+                <textarea id="userReview" name="userReview" rows="4"></textarea>
+                <button type="submit">Submit Review</button>
+            </div>
+        </div>
+    </div>
 </div>
+
+<div th:insert="~{fragments :: footer}"></div>
 </body>
 </html>

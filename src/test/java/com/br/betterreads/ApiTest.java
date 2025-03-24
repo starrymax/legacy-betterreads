@@ -6,6 +6,8 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 
+import java.util.Arrays;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
@@ -24,7 +26,7 @@ class ApiTest {
         System.out.println("Subtitle: " + book.getSubtitle());
         System.out.println("Author: " + book.getAuthor());
         System.out.println("ISBN: " + book.getIsbn());
-        System.out.println("Genre: " + book.getGenre());
+        System.out.println("Genre: " + Arrays.toString(book.getGenre()));
         System.out.println("covers: " + book.getCoverURL());
         System.out.println("Publication Year: " + book.getPublicationYear());
         System.out.println("Description: " + book.getDescription());

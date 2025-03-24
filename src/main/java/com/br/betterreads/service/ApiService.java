@@ -4,15 +4,19 @@ import com.br.betterreads.model.OpenLibraryApi;
 import com.br.betterreads.model.OpenLibraryTrendingResponse;
 import com.br.betterreads.util.BookMapper;
 import com.br.betterreads.model.Book;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+import java.time.LocalDateTime;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 public class ApiService {
@@ -24,6 +28,205 @@ public class ApiService {
         this.restTemplate = restTemplate;
         this.bookMapper = bookMapper;
     }
+
+    /**
+     * Truncates a string to a maximum length safely
+     *
+     * @param value String to truncate
+     * @return Truncated string or original if null or shorter
+     */
+    private String truncate(String value, int maxLength) {
+        if (value == null) {
+            return null;
+        }
+        return value.length() <= maxLength ? value : value.substring(0, maxLength);
+    }
+
+    /**
+     * Sanitizes all string fields in a Book entity to ensure they don't exceed
+     * the database column size limits
+     * @param book Book to sanitize
+     * @return Sanitized book
+     */
+    private Book sanitizeBookFields(Book book) {
+        if (book == null) return null;
+
+        book.setTitle(truncate(book.getTitle(), 255));
+        book.setSubtitle(truncate(book.getSubtitle(), 255));
+        book.setAuthor(truncate(book.getAuthor(), 255));
+        book.setDescription(truncate(book.getDescription(), 1000));
+        book.setCoverURL(truncate(book.getCoverURL(), 255));
+        book.setIsbn(truncate(book.getIsbn(), 13));
+
+        if (book.getGenre() != null) {
+            String[] sanitizedGenre = new String[book.getGenre().length];
+            for (int i = 0; i < book.getGenre().length; i++) {
+                sanitizedGenre[i] = truncate(book.getGenre()[i], 255);
+            }
+            book.setGenre(sanitizedGenre);
+        }
+
+        return book;
+    }
+
+    private Map<String, Object> performSearchRequest(String url) {
+        try {
+            ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
+                    url,
+                    HttpMethod.GET,
+                    null,
+                    new ParameterizedTypeReference<>() {
+                    }
+            );
+            return response.getBody();
+        } catch (Exception e) {
+            System.err.println("Error during API request: " + e.getMessage());
+            return null;
+        }
+    }
+
+    public List<Book> searchBookByAuthor(String author) {
+        try {
+            String searchUrl = String.format(
+                    "https://openlibrary.org/search.json?author=%s&limit=100",
+                    URLEncoder.encode(author, StandardCharsets.UTF_8)
+            );
+
+            Map<String, Object> result = performSearchRequest(searchUrl);
+            if (result != null) {
+                ObjectMapper mapper = new ObjectMapper();
+                JsonNode jsonNode = mapper.valueToTree(result);
+                List<Book> books = extractBooksFromSearchResult(jsonNode);
+                return books.stream()
+                        .map(this::sanitizeBookFields)
+                        .collect(Collectors.toList());
+            }
+            return new ArrayList<>();
+        } catch (Exception e) {
+            System.err.println("Error searching books by author: " + e.getMessage());
+            e.printStackTrace();
+            return new ArrayList<>();
+        }
+    }
+
+    public List<Book> searchBookByTitle(String title) {
+        try {
+            String searchUrl = String.format(
+                    "https://openlibrary.org/search.json?title=%s&limit=100",
+                    URLEncoder.encode(title, StandardCharsets.UTF_8)
+            );
+
+            Map<String, Object> result = performSearchRequest(searchUrl);
+            if (result != null) {
+                ObjectMapper mapper = new ObjectMapper();
+                JsonNode jsonNode = mapper.valueToTree(result);
+                List<Book> books = extractBooksFromSearchResult(jsonNode);
+                return books.stream()
+                        .map(this::sanitizeBookFields)
+                        .collect(Collectors.toList());
+            }
+            return new ArrayList<>();
+        } catch (Exception e) {
+            System.err.println("Error searching books by title: " + e.getMessage());
+            e.printStackTrace();
+            return new ArrayList<>();
+        }
+    }
+
+    private List<Book> extractBooksFromSearchResult(JsonNode root) {
+        List<Book> books = new ArrayList<>();
+        Set<String> uniqueKeys = new HashSet<>();
+
+        if (root != null && root.has("docs")) {
+            JsonNode docs = root.get("docs");
+            for (JsonNode doc : docs) {
+                String key = doc.has("key") ? doc.get("key").asText() : null;
+                if (key == null || uniqueKeys.contains(key)) {
+                    continue;
+                }
+                uniqueKeys.add(key);
+
+                Book book = new Book();
+
+                if (doc.has("title")) {
+                    book.setTitle(doc.get("title").asText());
+                } else {
+                    book.setTitle("Unknown Title");
+                }
+                book.setSubtitle("");
+
+                if (doc.has("author_name") && doc.get("author_name").isArray()) {
+                    StringBuilder authorBuilder = new StringBuilder();
+                    JsonNode authorNodes = doc.get("author_name");
+                    for (int i = 0; i < authorNodes.size(); i++) {
+                        if (i > 0) {
+                            authorBuilder.append(", ");
+                        }
+                        authorBuilder.append(authorNodes.get(i).asText());
+                    }
+                    book.setAuthor(authorBuilder.toString());
+                } else {
+                    book.setAuthor("Unknown Author");
+                }
+
+                String isbn = null;
+                if (doc.has("isbn") && doc.get("isbn").isArray() && !doc.get("isbn").isEmpty()) {
+                    isbn = doc.get("isbn").get(0).asText();
+                    isbn = normalizeIsbn(isbn);
+                } else {
+                    isbn = generateIsbnFromKey(key);
+                }
+                book.setIsbn(isbn);
+
+                if (doc.has("cover_i")) {
+                    book.setCoverURL("https://covers.openlibrary.org/b/id/" + doc.get("cover_i").asText() + "-M.jpg");
+                } else {
+                    book.setCoverURL("/images/covertemplate.jpg");
+                }
+
+                if (doc.has("first_publish_year")) {
+                    book.setPublicationYear(doc.get("first_publish_year").asInt());
+                }
+                book.setApiId(generateApiIdFromKey(key));
+                book.setLastSync(LocalDateTime.now());
+                books.add(book);
+            }
+        }
+        return books;
+    }
+
+    private String normalizeIsbn(String isbn) {
+        if (isbn == null) return "0000000000000";
+        String cleaned = isbn.replaceAll("[^0-9X]", "");
+        if (cleaned.length() > 13) {
+            return cleaned.substring(0, 13);
+        } else if (cleaned.length() < 13) {
+            return cleaned + "0".repeat(13 - cleaned.length());
+        }
+        return cleaned;
+    }
+
+    private String generateIsbnFromKey(String key) {
+        if (key == null) return "0000000000000";
+        String cleanKey = key.replaceAll("[^a-zA-Z0-9]", "");
+        int hashCode = Math.abs(cleanKey.hashCode());
+        String isbn = String.format("%013d", hashCode % 10000000000000L);
+        if (isbn.length() > 13) {
+            return isbn.substring(0, 13);
+        }
+        return isbn;
+    }
+
+    private int generateApiIdFromKey(String key) {
+        if (key == null) return new Random().nextInt(1000000);
+
+        try {
+            return Math.abs(key.hashCode() % 1000000000);
+        } catch (Exception e) {
+            return new Random().nextInt(1000000);
+        }
+    }
+
 
     public Book fetchBookFromApi(String isbn) {
         try {
@@ -98,8 +301,13 @@ public class ApiService {
                     }
                 }
             }
-
-            return book;
+            if (book.getCoverURL() == null) {
+                book.setCoverURL("/images/covertemplate.jpg");
+            }
+            if (book.getSubtitle() == null) {
+                book.setSubtitle("");
+            }
+            return sanitizeBookFields(book);
         } catch (Exception e) {
             System.err.println("Error fetching book data: " + e.getMessage());
             e.printStackTrace();

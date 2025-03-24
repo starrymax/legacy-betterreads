@@ -2,6 +2,7 @@ package com.br.betterreads.model;
 
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
+import org.hibernate.annotations.Type;
 
 import java.time.LocalDateTime;
 
@@ -61,8 +62,9 @@ public class Book {
     /**
      * Genre of the book (e.g., Fiction, Mystery, etc.).
      */
-    @Column(name = "genre")
-    private String genre;
+    @Column(name = "genre", columnDefinition = "text[]")
+    @Type(value = com.vladmihalcea.hibernate.type.array.StringArrayType.class)
+    private String[] genre;
 
     @Column(name = "publication_year")
     private Integer publicationYear;
@@ -233,7 +235,7 @@ public class Book {
      *
      * @return The book's genre.
      */
-    public String getGenre() {
+    public String[] getGenre() {
         return genre;
     }
 
@@ -242,7 +244,7 @@ public class Book {
      *
      * @param genre The new genre to assign.
      */
-    public void setGenre(String genre) {
+    public void setGenre(String[] genre) {
         this.genre = genre;
     }
 

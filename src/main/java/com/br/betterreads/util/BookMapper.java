@@ -18,10 +18,12 @@ public class BookMapper {
         book.setTitle(dto.getTitle());
         if (dto.getSubtitle() != null) {
             book.setSubtitle(dto.getSubtitle());
+        } else {
+            book.setSubtitle("");
         }
         book.setAuthor(formatAuthors(dto.getAuthors()));
         book.setIsbn(isbn);
-        book.setCoverURL(dto.getCover() != null ? dto.getCover().getMedium() : null);
+        book.setCoverURL(dto.getCover() != null ? dto.getCover().getMedium() : "/images/covertemplate.jpg");
         book.setGenre(formatSubjects(dto.getGenre()));
         book.setLastSync(LocalDateTime.now());
 
@@ -50,16 +52,16 @@ public class BookMapper {
                 .collect(Collectors.joining(", "));
     }
 
-    private String formatSubjects(List<OpenLibraryApi.OpenLibrarySubjectDTO> subjects) {
-        if (subjects == null || subjects.isEmpty()) return null;
-        Set<String> Unique = subjects.stream()
+    private String[] formatSubjects(List<OpenLibraryApi.OpenLibrarySubjectDTO> subjects) {
+        if (subjects == null || subjects.isEmpty()) return new String[0];
+        Set<String> unique = subjects.stream()
                 .map(OpenLibraryApi.OpenLibrarySubjectDTO::getName)
                 .map(String::toLowerCase)
                 .filter(genre -> !genre.contains("fictitious character"))
                 .filter(genre -> genre.matches("^[a-zA-Z ]+$"))
                 .collect(Collectors.toSet());
 
-        return Unique.isEmpty() ? null : String.join(", ", Unique);
+        return unique.isEmpty() ? new String[0] : unique.toArray(new String[0]);
     }
 
     public Book convertTrendingBook(OpenLibraryTrendingResponse.TrendingBook trendingBook) {

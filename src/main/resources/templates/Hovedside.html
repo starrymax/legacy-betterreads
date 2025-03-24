@@ -53,18 +53,21 @@
 <div class="searchbar-container">
     <h2>Find your next book</h2>
     <div class="searchbar-main">
-        <select name="searchtype" id="typeSearch" aria-label="Search filter main">
-            <option value="title">Title</option>
-            <option value="author">Author</option>
-        </select>
-        <input aria-label="Search bar main" type="search" id="main-search" name="searchmain" placeholder="Search ...">
-        <button class="search-btn-main" type="submit">
-            <i class="material-symbols-outlined">search</i>
-        </button>
-        <div class="button-separator"></div>
-        <button class="barcode-btn-main">
-            <i class="material-symbols-outlined">barcode_scanner</i>
-        </button>
+        <form th:action="@{/search}" method="get">
+            <select name="searchType" id="typeSearch" aria-label="Search filter main">
+                <option value="title">Title</option>
+                <option value="author">Author</option>
+                <option value="isbn">ISBN</option>
+            </select>
+            <input aria-label="Search bar main" type="search" id="main-search" name="query" placeholder="Search ...">
+            <button class="search-btn-main" type="submit">
+                <i class="material-symbols-outlined">search</i>
+            </button>
+            <div class="button-separator"></div>
+            <button class="barcode-btn-main" type="button">
+                <i class="material-symbols-outlined">barcode_scanner</i>
+            </button>
+        </form>
     </div>
 </div>
 
