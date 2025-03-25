@@ -3,59 +3,35 @@
 <head>
     <meta charset="UTF-8">
     <title>User Profile</title>
-    <link rel="stylesheet" th:href="@{../static/styles.css}">
-    <link rel="stylesheet" th:href="@{../static/footer.css}">
-    <link rel="stylesheet" th:href="@{../static/Bruker.css}">
+    <link rel="stylesheet"
+          href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&icon_names=account_circle,barcode_scanner,chevron_left,chevron_right,qr_code_scanner,search&display=swap">
+    <link rel="stylesheet" th:href="@{/styles.css}">
+    <link rel="stylesheet" th:href="@{/hovedside.css}">
 
 </head>
 <body>
 <div th:insert="~{fragments :: header}"></div>
 
-<header th:fragment="header">
-    <nav class="navbar">
-        <span>&#9776;</span>
-        <h1><a href="BetterReads.html">BetterReads</a></h1>
-        <div class="sidebar">
-            <ul class="menu">
-                <li><a href="BetterReads.html">Home</a></li>
-                <li><a href="">My Books</a></li>
-                <li><a href="">Browse</a></li>
-            </ul>
-            <search class="searchbar-nav">
-                <form>
-                    <select aria-label="Search Filter Navbar" id="searchTypeNav">
-                        <option value="books">Books</option>
-                        <option value="authors">Authors</option>
-                    </select>
-                    <input aria-label="navsearch" id="navsearch" type="search" name="search" placeholder="Search...">
-                </form>
-            </search>
-        </div>
-        <a href="Signup.html">Register</a>
-        <a href="Login.html">Login</a>
-    </nav>
-</header>
-
 <div class="container">
-    <h2>Welcome, <span th:text="${user?.username ?: 'Guest'}"></span>!</h2>
+    <h2>Welcome, <span th:text="${user.username}"></span>!</h2>
 
-    <img th:src="${user?.profilePictureUrl ?: '/images/default-profile.png'}"
+    <img th:src="${'/images/default-profile.png'}"
          alt="Profile Picture"
          class="profile-pic">
 
-    <p><strong>Bio:</strong> <span th:text="${user?.bio ?: 'No bio available'}"></span></p>
+    <p><strong>Bio:</strong> <span th:text="${'No bio available'}"></span></p>
 
 
-    <p><strong>Total Reviews:</strong> <span th:text="${user?.totalReviews ?: 0}"></span></p>
+    <p><strong>Total Reviews:</strong> <span th:text="${ 0}"></span></p>
 
 
-    <p><strong>Joined:</strong> <span th:text="${#dates.format(user?.joinDate, 'MMMM dd, yyyy') ?: 'Unknown'}"></span></p>
+    <p><strong>Joined:</strong> <span th:text="${user.created_at}"></span></p>
 
 
 </div>
 
 <div class="container">
-    <h3><span th:text="${user != null ? user.username : 'Profile'}"></span>'s shelves</h3>
+    <h3><span th:text="${user.username}"></span>'s shelves</h3>
     <p><a href="brukerbokliste.html"></a>all books</p>
 </div>
 

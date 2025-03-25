@@ -45,6 +45,7 @@ public class ApiService {
     /**
      * Sanitizes all string fields in a Book entity to ensure they don't exceed
      * the database column size limits
+     *
      * @param book Book to sanitize
      * @return Sanitized book
      */
@@ -239,7 +240,8 @@ public class ApiService {
                     isbnUrl,
                     HttpMethod.GET,
                     null,
-                    new ParameterizedTypeReference<>() {}
+                    new ParameterizedTypeReference<>() {
+                    }
             );
 
             OpenLibraryApi bookData = Objects.requireNonNull(response.getBody()).get("ISBN:" + isbn);
@@ -263,7 +265,8 @@ public class ApiService {
                         bookDetailsUrl,
                         HttpMethod.GET,
                         null,
-                        new ParameterizedTypeReference<>() {}
+                        new ParameterizedTypeReference<>() {
+                        }
                 );
 
                 Map<String, Object> bookDetails = bookDetailsResponse.getBody();
@@ -281,7 +284,8 @@ public class ApiService {
                                         workUrl,
                                         HttpMethod.GET,
                                         null,
-                                        new ParameterizedTypeReference<>() {}
+                                        new ParameterizedTypeReference<>() {
+                                        }
                                 );
 
                                 Map<String, Object> workDetails = workDetailsResponse.getBody();
@@ -313,6 +317,52 @@ public class ApiService {
             e.printStackTrace();
             return null;
         }
+    }
+
+    public String fetchDescriptionFromWorkId(String workId) {
+
+        String workUrl = "https://openlibrary.org/works/" + workId + ".json";
+
+        ResponseEntity<Map<String, Object>> workResponse = restTemplate.exchange(
+                workUrl,
+                HttpMethod.GET,
+                null,
+                new ParameterizedTypeReference<>() {
+                }
+        );
+
+        Map<String, Object> workDetails = workResponse.getBody();
+        if (workDetails == null) {
+            return null;
+        }
+        if (workDetails.containsKey("description")) {
+            Object desObj = workDetails.get("description");
+            return getDescription(desObj);
+        }
+
+        return "No description availible";
+
+    }
+
+    private String fetchAuthorName(String authorKey) {
+        try {
+            String authorUrl = "https://openlibrary.org" + authorKey + ".json";
+            ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
+                    authorUrl,
+                    HttpMethod.GET,
+                    null,
+                    new ParameterizedTypeReference<>() {
+                    }
+            );
+
+            Map<String, Object> authorData = response.getBody();
+            if (authorData != null && authorData.containsKey("name")) {
+                return authorData.get("name").toString();
+            }
+        } catch (Exception e) {
+            System.err.println("Error fetching author name: " + e.getMessage());
+        }
+        return null;
     }
 
     private static String getDescription(Object descObj) {
@@ -350,7 +400,7 @@ public class ApiService {
                 OpenLibraryTrendingResponse.class
         );
 
-        if(response.getBody() == null || response.getBody().getWorks() == null) {
+        if (response.getBody() == null || response.getBody().getWorks() == null) {
             return List.of();
         }
 

@@ -37,17 +37,20 @@
 
 <div class="top-picks">
     <h2>Trending</h2>
-    <div class="scoll-container">
+    <div class="scroll-container">
+        <button class="scroll-btn left">
+            <i class="material-symbols-outlined">chevron_left</i>
+        </button>
+
         <div class="liste">
-            <button class="scroll-btn left">
-                <i class="material-symbols-outlined">chevron_left</i>
-            </button>
-            <!-- TODO lag denne listen -->
-            <img th:each="book : ${books}" th:src="${book.coverURL}" th:alt="${book.title}">
-            <button class="scroll-btn right">
-                <i class="material-symbols-outlined">chevron_right</i>
-            </button>
+            <a th:each="book : ${books}" th:href="@{/book(isbn=${book.isbn})}">
+                <img th:src="${book.coverURL}" th:alt="${book.title}">
+            </a>
         </div>
+
+        <button class="scroll-btn right">
+            <i class="material-symbols-outlined">chevron_right</i>
+        </button>
     </div>
 </div>
 <script>

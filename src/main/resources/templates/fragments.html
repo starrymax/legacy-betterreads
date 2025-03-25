@@ -23,7 +23,8 @@
                                 <option value="author">Author</option>
                                 <option value="isbn">ISBN</option>
                             </select>
-                            <input aria-label="navsearch" id="navsearch" type="search" name="query" placeholder="Search...">
+                            <input aria-label="navsearch" id="navsearch" type="search" name="query"
+                                   placeholder="Search...">
                             <button type="submit">Search</button>
                         </form>
                     </search>
@@ -34,16 +35,21 @@
             </ul>
         </div>
         <div class="auth-links">
-            <div th:if="${username == null}">
+            <div th:if="${user == null}">
                 <a th:href="@{/signup}">Register</a>
                 <a th:href="@{/login}">Login</a>
             </div>
-            <div th:if="${username}">
+            <div th:if="${user}">
                 <a th:href="@{/logout}">Logout</a>
             </div>
         </div>
         <div class="user">
-            <i class="material-symbols-outlined">account_circle</i>
+            <div th:if="${user}">
+                <a th:href="@{/user}"> <i class="material-symbols-outlined">account_circle</i> </a>
+            </div>
+            <div th:if="${user == null}">
+                <i class="material-symbols-outlined">account_circle</i>
+            </div>
         </div>
     </nav>
 </header>

@@ -1,32 +1,41 @@
 @import url('https://fonts.googleapis.com/css2?family=Roboto+Slab:wght@100..900&display=swap');
 
-/*globale variabler*/
+/* Globale variabler */
 :root {
     --maincolor: #F5F2EB;
     --textcolor: black;
     --navColor: #9CAFB7;
 }
 
-/*Nav!*/
+/* === BASE === */
 body {
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    max-width: 100%;
+    overflow-x: hidden;
     font-family: 'Segoe UI', Tahoma, sans-serif;
     background-color: var(--maincolor);
     color: var(--textcolor);
-    margin: 0;
-    /*evt tekst/linje høyde(padding)*/
 }
 
+main {
+    flex: 1;
+}
+
+/* === NAVBAR === */
 .navbar {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    background-color: var(--navColor);
-    padding: 15px 30px;
-    border-bottom: solid black;
-    position: relative; /* Sørger for korrekt posisjonering */
+    background-color: var(--maincolor);
+    padding: 15px 15px;
+    padding-bottom: 100px;
+    position: relative;
 }
 
-/* Sentrer BetterReads */
 .navbar h1 {
     position: absolute;
     left: 50%;
@@ -37,13 +46,15 @@ body {
 .navbar #header a {
     font-family: "Roboto Slab", serif;
     font-size: 2em;
+    text-decoration: none;
+    color: black;
+    font-weight: bold;
 }
 
-/* Flytt Login og Register til høyre */
 .navbar .auth-links {
-    margin-left: auto; /* Skyver Login/Register til høyre */
+    margin-left: auto;
     display: flex;
-    gap: 15px; /* Mellomrom mellom linkene */
+    gap: 15px;
 }
 
 .navbar .auth-links a {
@@ -51,13 +62,6 @@ body {
     color: var(--textcolor);
     font-size: 18px;
     font-weight: bold;
-}
-
-.navbar h1 a {
-    text-decoration: none;
-    color: black;
-    font-weight: bold;
-    font-size: 24px;
 }
 
 .navbar a:hover {
@@ -69,25 +73,40 @@ body {
     font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 48;
 }
 
-/* Stil for sidemeny */
+/* === SIDEMENY === */
 .sidebar {
-    position: absolute;
-    top: 73px;
+    position: fixed;
+    top: 0;
     left: -250px;
     width: 250px;
-    height: calc(100vh - 60px);
-    background-color: #F9F8F3;
-    padding-top: 20px;
-    transition: left 0.2s ease-in-out;
-    box-shadow: 2px 0px 5px rgba(0, 0, 0, 0.2);
-    border-right: 1px solid black;
+    height: 100vh;
+    background-color: var(--maincolor);
+    padding-top: 60px;
+    transition: left 0.3s ease-in-out;
+    z-index: 1000;
 }
-
 
 .sidebar.show-menu {
     left: 0;
+    box-shadow: 2px 0px 10px rgba(0, 0, 0, 0.2);
 }
 
+.sidebar-logo {
+    text-align: right;
+    padding: 10px 20px;
+    font-size: 24px;
+    font-family: "Roboto Slab", serif;
+}
+
+.sidebar-logo .logo-part1 {
+    font-weight: 300;
+    color: #333;
+}
+
+.sidebar-logo .logo-part2 {
+    font-weight: 700;
+    color: #333;
+}
 
 .menu {
     display: flex;
@@ -108,37 +127,28 @@ body {
     color: var(--textcolor);
     font-size: 18px;
     display: block;
+    transition: color 0.2s;
+}
+
+.menu li a:hover {
+    color: #4f4f4f;
 }
 
 #hamburger-icon {
     font-size: 32px;
     cursor: pointer;
+    padding: 10px;
+    margin-left: 10px;
 }
 
-#hamburger-icon {
-    font-size: 32px;
-    cursor: pointer;
-}
-
-
-/*Footer!*/
-.footer-header {
-    font-family: "Roboto Slab", serif;
-}
-
-.skinny {
-    font-weight: 200;
-}
-
-.fat {
-    font-weight: 600;
-}
-
+/* === FOOTER === */
 .footer {
     background-color: #333;
     color: white;
     padding: 30px 0;
     text-align: center;
+    margin: 0;
+    border: none;
 }
 
 .footer-container {
@@ -157,6 +167,18 @@ body {
 
 .footer h3 {
     padding-bottom: 10px;
+}
+
+.footer-header {
+    font-family: "Roboto Slab", serif;
+}
+
+.skinny {
+    font-weight: 200;
+}
+
+.fat {
+    font-weight: 600;
 }
 
 .copyright {

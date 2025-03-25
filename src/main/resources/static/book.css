@@ -1,0 +1,247 @@
+
+body {
+    margin: 0;
+    padding: 0;
+    background-color: #F5F2EB;
+    color: #333;
+}
+
+.book-detail {
+    max-width: 1200px;
+    padding: 100px;
+    margin: 0 auto 100px;
+}
+
+.book-header h1 {
+    font-size: 2.5em;
+    color: #2c3e50;
+    margin: 0;
+}
+
+.book-header h2 {
+    font-size: 1.8em;
+    color: #7f8c8d;
+    margin: 10px 0;
+}
+
+.book-header h3 {
+    font-size: 1.4em;
+    color: #95a5a6;
+}
+
+
+.book-content {
+    display: flex;
+    gap: 40px;
+    margin-top: 20px;
+    flex-wrap: wrap;
+    padding: 100px;
+    margin-bottom: 100px;
+}
+
+.book-left {
+    width: 250px;
+    flex-shrink: 0;
+}
+
+.book-cover {
+    width: 100%;
+}
+
+.book-cover img {
+    width: 100%;
+    height: auto;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.book-status {
+    margin-top: 10px;
+}
+
+.book-status label {
+    font-size: 1.2em;
+    color: #34495e;
+}
+
+.book-status select {
+    width: 100%;
+    padding: 10px;
+    font-size: 1em;
+    border: 2px solid #bdc3c7;
+    border-radius: 5px;
+    background-color: #ecf0f1;
+    cursor: pointer;
+}
+
+.book-status select:focus {
+    outline: none;
+    border-color: #3498db;
+    box-shadow: 0 0 5px rgba(52, 152, 219, 0.5);
+}
+
+
+
+
+fieldset.star-rating {
+    border: none;
+    margin-top: 20px;
+    padding: 0;
+    justify-content: left;
+    display: flex;
+}
+
+legend {
+    font-size: 1.2em;
+    color: #34495e;
+}
+
+.stars {
+    display: flex;
+    flex-direction: row-reverse; /* Reverses the display order while keeping selection correct */
+    gap: 5px;
+    justify-content: left;
+}
+
+.stars input {
+    display: none;
+}
+
+.stars label {
+    font-size: 2em;
+    color: #d3d3d3;
+    cursor: pointer;
+    transition: color 0.3s;
+}
+
+/* Highlight stars correctly from left to right */
+.stars label:hover,
+.stars label:hover ~ label,
+.stars input:checked ~ label {
+    color: #f39c12;
+}
+
+
+
+
+.book-info {
+    flex: 1;
+    margin-top: 20px;
+}
+
+.book-info p {
+    font-size: 1.2em;
+    margin-bottom: 10px;
+}
+
+.book-description h4 {
+    font-size: 1.5em;
+    color: #34495e;
+}
+
+.book-description p {
+    font-size: 1em;
+    color: #7f8c8d;
+}
+
+.user-review {
+    margin-top: 20px;
+}
+
+.user-review label {
+    font-size: 1.2em;
+    color: #34495e;
+}
+
+.user-review textarea {
+    width: 100%;
+    padding: 10px;
+    font-size: 1em;
+    border: 1px solid #bdc3c7;
+    border-radius: 5px;
+    background-color: #ecf0f1;
+    resize: vertical;
+}
+
+.user-review button {
+    background-color: #3498db;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    font-size: 1em;
+    border-radius: 5px;
+    cursor: pointer;
+    margin-top: 10px;
+}
+
+.user-review button:hover {
+    background-color: #2980b9;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .book-content {
+        flex-direction: column;/* Stack vertically on smaller screens */
+        align-items: center;
+        gap: 20px;
+    }
+
+    .book-left {
+        width: 100%;/* Make left column take full width */
+    }
+
+    .book-info {
+        width: 100%;/* Make right column take full width */
+        text-align: center;
+    }
+
+    .book-cover img {
+        width: 150px;
+    }
+
+    .book-header h1 {
+        font-size: 2em;
+    }
+
+    .book-header h2 {
+        font-size: 1.4em;
+    }
+
+    .book-header h3 {
+        font-size: 1.2em;
+    }
+}
+
+@media (max-width: 480px) {
+    .book-header h1 {
+        font-size: 1.8em;
+    }
+
+    .book-header h2 {
+        font-size: 1.2em;
+    }
+
+    .book-header h3 {
+        font-size: 1em;
+    }
+
+    .book-cover img {
+        width: 100px;
+    }
+    .book-info p {
+        font-size: 1.2em;
+        margin-bottom: 10px;
+    }
+
+    .book-info p strong {
+        color: #34495e;
+    }
+
+    .book-info span {
+        display: inline-block;
+        margin-right: 5px;
+        color: #7f8c8d;
+font-style: italic;
+    }
+
+}

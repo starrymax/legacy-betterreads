@@ -91,17 +91,24 @@ public class UserController {
     public String showMainPage(Model model, HttpSession session) {
         User loggedInUser = userService.getLoggedInUser(session);
 
-//        if (loggedInUser == null) {
-//            return "redirect:login";
-//        }
-
         if (loggedInUser != null) {
-            model.addAttribute("username", loggedInUser.getUsername());
+            model.addAttribute("user", loggedInUser);
         }
 
         List<Book> trendingBooks = bookService.displayTrending(12);
         model.addAttribute("books", trendingBooks);
         return "BetterReads";
+    }
+
+    @GetMapping("/user")
+    public String viewProfile(Model model, HttpSession session) {
+        User loggedInUser = userService.getLoggedInUser(session);
+
+        if (loggedInUser != null) {
+            model.addAttribute("user", loggedInUser);
+        }
+
+        return "Bruker";
     }
 
 }

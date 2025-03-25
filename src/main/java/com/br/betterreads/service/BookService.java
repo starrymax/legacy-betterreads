@@ -97,7 +97,9 @@ public class BookService {
                     .map(trendingBook -> {
                         Book book = bookMapper.convertTrendingBook(trendingBook);
                         String workId = trendingBook.getKey().replace("/works/", "");
+                        String desc = apiService.fetchDescriptionFromWorkId(workId);
                         book.setIsbn(workId);
+                        book.setDescription(desc);
                         book.setTrending(true);
                         book.setLastSync(LocalDateTime.now());
                         return book;
