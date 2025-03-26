@@ -22,6 +22,7 @@ public class Book {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "book_id")
+    @Basic(fetch = FetchType.LAZY)
     private Long bookId;
 
     /**
@@ -29,6 +30,7 @@ public class Book {
      */
     @NotNull
     @Column(name = "api_id", nullable = false)
+    @Basic(fetch = FetchType.LAZY)
     private int apiId;
 
     /**
@@ -36,12 +38,14 @@ public class Book {
      */
     @NotNull
     @Column(name = "title", nullable = false)
+    @Basic(fetch = FetchType.EAGER)
     private String title;
 
     /**
      * Title of the book.
      */
     @Column(name = "subtitle")
+    @Basic(fetch = FetchType.LAZY)
     private String subtitle;
 
 
@@ -50,12 +54,14 @@ public class Book {
      */
     @NotNull
     @Column(name = "author", nullable = false, columnDefinition = "varchar(255) default 'Unknown'")
+    @Basic(fetch = FetchType.LAZY)
     private String author;
 
     /**
      * Description of the book's content.
      */
     @Column(name = "description")
+    @Basic(fetch = FetchType.LAZY)
     private String description;
 
     /**
@@ -63,9 +69,11 @@ public class Book {
      */
     @Column(name = "genre", columnDefinition = "text[]")
     @Type(value = com.vladmihalcea.hibernate.type.array.StringArrayType.class)
+    @Basic(fetch = FetchType.LAZY)
     private String[] genre;
 
     @Column(name = "publication_year")
+    @Basic(fetch = FetchType.LAZY)
     private Integer publicationYear;
 
     /**
@@ -73,6 +81,7 @@ public class Book {
      */
     @NotNull
     @Column(name = "cover_url", nullable = false)
+    @Basic(fetch = FetchType.EAGER)
     private String coverURL;
 
     /**
@@ -83,6 +92,7 @@ public class Book {
     @NotNull(message = "Field is required")
     @Size(min = 13, max = 13, message = "ISBN must be exactly size 13")
     @Column(name = "ISBN", nullable = false, unique = true)
+    @Basic(fetch = FetchType.LAZY)
     private String isbn;
 
     /**
@@ -90,10 +100,12 @@ public class Book {
      */
     @NotNull(message = "Field is required")
     @Column(name = "last_sync", nullable = false)
+    @Basic(fetch = FetchType.LAZY)
     private LocalDateTime lastSync;
 
 
     @NotNull
+    @Basic(fetch = FetchType.EAGER)
     private boolean trending;
 
 

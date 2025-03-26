@@ -23,7 +23,7 @@ public class BookMapper {
         }
         book.setAuthor(formatAuthors(dto.getAuthors()));
         book.setIsbn(isbn);
-        book.setCoverURL(dto.getCover() != null ? dto.getCover().getMedium() : "/images/covertemplate.jpg");
+        book.setCoverURL(dto.getCover() != null ? dto.getCover().getMedium() : "/images/template.avif");
         book.setGenre(formatSubjects(dto.getGenre()));
         book.setLastSync(LocalDateTime.now());
 

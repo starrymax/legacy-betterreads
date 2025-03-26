@@ -43,7 +43,7 @@
                     <img th:if="${book.coverURL != null && !book.coverURL.isEmpty()}"
                          th:src="@{${book.coverURL}}" alt="Book cover">
                     <img th:unless="${book.coverURL != null && !book.coverURL.isEmpty()}"
-                         th:src="@{/images/covertemplate.jpg}" alt="No cover available">
+                         th:src="@{/images/template.avif}" alt="No cover available">
                 </div>
                 <div class="book-info">
                     <h3 th:text="${book.title}"></h3>

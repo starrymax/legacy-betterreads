@@ -175,7 +175,7 @@ public class ApiService {
                 if (doc.has("cover_i")) {
                     book.setCoverURL("https://covers.openlibrary.org/b/id/" + doc.get("cover_i").asText() + "-M.jpg");
                 } else {
-                    book.setCoverURL("/images/covertemplate.jpg");
+                    book.setCoverURL("/images/template.avif");
                 }
 
                 if (doc.has("first_publish_year")) {
