@@ -16,6 +16,8 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.concurrent.*;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 @Service
@@ -24,6 +26,10 @@ public class ApiService {
     private final RestTemplate restTemplate;
     private final BookMapper bookMapper;
 
+    private final Map<String, List<Book>> searchResultsCache = new ConcurrentHashMap<>();
+    private final Map<String, Long> searchTimestamps = new ConcurrentHashMap<>();
+    private static final long SEARCH_CACHE_TTL = 1800000;
+
     public ApiService(RestTemplate restTemplate, BookMapper bookMapper) {
         this.restTemplate = restTemplate;
         this.bookMapper = bookMapper;
@@ -31,16 +37,24 @@ public class ApiService {
 
 
     /**
-     * Fetches ISBN from work editions endpoint if available
+     * Fetches ISBN from work editions
      *
      * @param workKey Work key (e.g., "/works/OL27482W")
      * @return Valid ISBN or fallback
      */
+    private final Map<String, Map<String, Object>> workDetailsCache = new HashMap<>();
+
     private String fetchIsbnFromWork(String workKey) {
         if (workKey == null) return "0000000000000";
 
         try {
-            String editionsUrl = "https://openlibrary.org" + workKey + "/editions.json";
+            Map<String, Object> workDetails = workDetailsCache.get(workKey);
+            if (workDetails != null) {
+                String isbn = extractIsbnFromWorkDetails(workDetails);
+                if (isbn != null) return isbn;
+            }
+
+            String editionsUrl = "https://openlibrary.org" + workKey + "/editions.json?limit=10&fields=isbn_10,isbn_13";
             ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
                     editionsUrl,
                     HttpMethod.GET,
@@ -80,6 +94,30 @@ public class ApiService {
         return generateIsbnFromKey(workKey);
     }
 
+    private String extractIsbnFromWorkDetails(Map<String, Object> workDetails) {
+        if (workDetails.containsKey("identifiers")) {
+            @SuppressWarnings("unchecked")
+            Map<String, Object> identifiers = (Map<String, Object>) workDetails.get("identifiers");
+
+            if (identifiers.containsKey("isbn_13")) {
+                @SuppressWarnings("unchecked")
+                List<String> isbn13 = (List<String>) identifiers.get("isbn_13");
+                if (isbn13 != null && !isbn13.isEmpty()) {
+                    return normalizeIsbn(isbn13.getFirst());
+                }
+            }
+
+            if (identifiers.containsKey("isbn_10")) {
+                @SuppressWarnings("unchecked")
+                List<String> isbn10 = (List<String>) identifiers.get("isbn_10");
+                if (isbn10 != null && !isbn10.isEmpty()) {
+                    return normalizeIsbn(isbn10.getFirst());
+                }
+            }
+        }
+        return null;
+    }
+
     /**
      * Fetches work details from Open Library API
      *
@@ -88,8 +126,18 @@ public class ApiService {
      */
     private Map<String, Object> fetchWorkDetails(String workKey) {
         if (workKey == null) return null;
+
+
         if (!workKey.startsWith("/")) {
             workKey = "/" + workKey;
+        }
+
+        if (!workKey.startsWith("/works/") && !workKey.contains("/works/")) {
+            workKey = "/works" + workKey;
+        }
+
+        if (workDetailsCache.containsKey(workKey)) {
+            return workDetailsCache.get(workKey);
         }
 
         String workUrl = "https://openlibrary.org" + workKey + ".json";
@@ -100,7 +148,11 @@ public class ApiService {
                     null,
                     new ParameterizedTypeReference<>() {}
             );
-            return workResponse.getBody();
+            Map<String, Object> details = workResponse.getBody();
+            if (details != null) {
+                workDetailsCache.put(workKey, details);
+            }
+            return details;
         } catch (Exception e) {
             System.err.println("Error fetching work details: " + e.getMessage());
             return null;
@@ -123,36 +175,55 @@ public class ApiService {
         }
     }
 
-    public List<Book> searchBookByAuthor(String author) {
-        try {
-            String searchUrl = String.format(
-                    "https://openlibrary.org/search.json?author=%s&limit=100",
-                    URLEncoder.encode(author, StandardCharsets.UTF_8)
-            );
-            return processSearchRequest(searchUrl);
-        } catch (Exception e) {
-            System.err.println("Error searching books by author: " + e.getMessage());
-            e.printStackTrace();
-            return new ArrayList<>();
-        }
+    public List<Book> searchBookByTitle(String title) {
+        String cacheKey = "title:" + title.toLowerCase();
+        return getCachedOrFetchResults(cacheKey, () -> {
+            try {
+                String searchUrl = String.format(
+                        "https://openlibrary.org/search.json?title=%s&limit=100&fields=*,author_name,cover_i,isbn,first_publish_year,description,subject,works",
+                        URLEncoder.encode(title, StandardCharsets.UTF_8)
+                );
+                return processSearchRequest(searchUrl);
+            } catch (Exception e) {
+                System.err.println("Error searching books by title: " + e.getMessage());
+                return new ArrayList<>();
+            }
+        });
     }
 
-    public List<Book> searchBookByTitle(String title) {
-        try {
-            String searchUrl = String.format(
-                    "https://openlibrary.org/search.json?title=%s&limit=100",
-                    URLEncoder.encode(title, StandardCharsets.UTF_8)
-            );
-            return processSearchRequest(searchUrl);
-        } catch (Exception e) {
-            System.err.println("Error searching books by title: " + e.getMessage());
-            e.printStackTrace();
-            return new ArrayList<>();
+    public List<Book> searchBookByAuthor(String author) {
+        String cacheKey = "author:" + author.toLowerCase();
+        return getCachedOrFetchResults(cacheKey, () -> {
+            try {
+                String searchUrl = String.format(
+                        "https://openlibrary.org/search.json?author=%s&limit=100&fields=*,author_name,cover_i,isbn,first_publish_year,description,subject,works",
+                        URLEncoder.encode(author, StandardCharsets.UTF_8)
+                );
+                return processSearchRequest(searchUrl);
+            } catch (Exception e) {
+                System.err.println("Error searching books by author: " + e.getMessage());
+                return new ArrayList<>();
+            }
+        });
+    }
+
+    private List<Book> getCachedOrFetchResults(String cacheKey, Supplier<List<Book>> dataFetcher) {
+        if (searchResultsCache.containsKey(cacheKey)) {
+            long timestamp = searchTimestamps.getOrDefault(cacheKey, 0L);
+            if (System.currentTimeMillis() - timestamp < SEARCH_CACHE_TTL) {
+                return new ArrayList<>(searchResultsCache.get(cacheKey));
+            }
         }
+
+        List<Book> results = dataFetcher.get();
+
+        searchResultsCache.put(cacheKey, new ArrayList<>(results));
+        searchTimestamps.put(cacheKey, System.currentTimeMillis());
+
+        return results;
     }
 
     private List<Book> extractBooksFromSearchResult(JsonNode root) {
-        // Using a composite key of title+author to identify unique books
         Map<String, Book> uniqueBooks = new HashMap<>();
         List<Book> resultBooks = new ArrayList<>();
 
@@ -161,15 +232,12 @@ public class ApiService {
             JsonNode docs = root.get("docs");
 
             for (JsonNode doc : docs) {
-                // Create book and fill basic information
                 Book book = new Book();
 
-                // Set title
                 String title = doc.has("title") ? doc.get("title").asText() : "Unknown Title";
                 book.setTitle(title);
                 book.setSubtitle("");
 
-                // Set authors
                 String author = "Unknown Author";
                 if (doc.has("author_name") && doc.get("author_name").isArray()) {
                     StringBuilder authorBuilder = new StringBuilder();
@@ -182,10 +250,7 @@ public class ApiService {
                 }
                 book.setAuthor(author);
 
-                // Create a composite key for deduplication
                 String compositeKey = title.toLowerCase() + "||" + author.toLowerCase();
-
-                // Extract work key for additional metadata
                 String key = doc.has("key") ? doc.get("key").asText() : null;
                 String workKey = null;
 
@@ -202,8 +267,6 @@ public class ApiService {
                         }
                     }
                 }
-
-                // Set default description
                 book.setDescription("No description available");
 
                 // Set cover URL
@@ -218,7 +281,6 @@ public class ApiService {
                     book.setPublicationYear(doc.get("first_publish_year").asInt());
                 }
 
-                // Set ISBN
                 String isbn;
                 if (doc.has("isbn") && doc.get("isbn").isArray() && !doc.get("isbn").isEmpty()) {
                     isbn = normalizeIsbn(doc.get("isbn").get(0).asText());
@@ -232,12 +294,10 @@ public class ApiService {
 
                 book.setIsbn(isbn);
 
-                // Set genres/subjects
                 if (doc.has("subject") && doc.get("subject").isArray()) {
                     setGenresFromSubjects(doc.get("subject"), book);
                 }
 
-                // Try to get more details from workKey
                 if (workKey != null) {
                     enhanceBookWithWorkDetails(book, workKey);
                 }
@@ -245,12 +305,11 @@ public class ApiService {
                 book.setApiId(generateApiIdFromKey(key));
                 book.setLastSync(LocalDateTime.now());
 
-                // Determine if this book should replace an existing one
-                boolean shouldReplace = false;
+                boolean shouldReplace;
                 if (!uniqueBooks.containsKey(compositeKey)) {
                     shouldReplace = true;
                 } else {
-                    // Compare with existing book to see if this one is better
+
                     Book existingBook = uniqueBooks.get(compositeKey);
                     shouldReplace = isBookBetterQuality(book, existingBook);
                 }
@@ -263,17 +322,14 @@ public class ApiService {
             }
         }
 
-        // Sort results by quality score and then by exact match or closest match
         resultBooks.sort((b1, b2) -> {
-            // Calculate quality scores
             int score1 = calculateBookQualityScore(b1);
             int score2 = calculateBookQualityScore(b2);
 
             if (score1 != score2) {
-                return score2 - score1; // Higher score first
+                return score2 - score1;
             }
 
-            // If quality scores are equal, prefer exact title matches
             String title1 = b1.getTitle().toLowerCase();
             String title2 = b2.getTitle().toLowerCase();
 
@@ -281,27 +337,23 @@ public class ApiService {
                 return 0;
             }
 
+            assert root != null;
             String searchQuery = root.has("q") ? root.get("q").asText().toLowerCase() : "";
 
-            // Prefer exact matches to query
             boolean exactMatch1 = title1.equals(searchQuery);
             boolean exactMatch2 = title2.equals(searchQuery);
 
-            if (exactMatch1 && !exactMatch2) return -1;
-            if (!exactMatch1 && exactMatch2) return 1;
+            if (exactMatch1) return -1;
+            if (exactMatch2) return 1;
 
-            // Otherwise prefer titles that start with the query
             boolean startsWith1 = title1.startsWith(searchQuery);
             boolean startsWith2 = title2.startsWith(searchQuery);
 
             if (startsWith1 && !startsWith2) return -1;
             if (!startsWith1 && startsWith2) return 1;
 
-            // Otherwise use natural ordering
             return title1.compareTo(title2);
         });
-
-        // Return only books with descriptions first, then fall back to any books
         List<Book> booksWithDescriptions = resultBooks.stream()
                 .filter(b -> !"No description available".equals(b.getDescription()))
                 .toList();
@@ -320,24 +372,18 @@ public class ApiService {
     private int calculateBookQualityScore(Book book) {
         int score = 0;
 
-        // Description is most important
         if (!"No description available".equals(book.getDescription())) {
             score += 10;
-            // Bonus points for longer descriptions (likely more informative)
             score += Math.min(5, book.getDescription().length() / 100);
         }
 
-        // Genres are next most important
         if (book.getGenre() != null && book.getGenre().length > 0) {
-            score += 5 * book.getGenre().length; // More genres = better categorization
+            score += 5 * book.getGenre().length;
         }
 
-        // Having a cover image
         if (book.getCoverURL() != null && !"/images/template.avif".equals(book.getCoverURL())) {
             score += 3;
         }
-
-        // Having a publication year
         if (book.getPublicationYear() != null && book.getPublicationYear() > 0) {
             score += 2;
         }
@@ -393,6 +439,7 @@ public class ApiService {
         try {
             Map<String, Object> workDetails = fetchWorkDetails(workKey);
             if (workDetails != null) {
+
                 // Description
                 if (workDetails.containsKey("description")) {
                     Object descObj = workDetails.get("description");
@@ -411,6 +458,11 @@ public class ApiService {
                         book.setGenre(genres.toArray(new String[0]));
                     }
                 }
+
+                // Store in cache
+                if (!workDetailsCache.containsKey(workKey)) {
+                    workDetailsCache.put(workKey, workDetails);
+                }
             }
         } catch (Exception e) {
             System.err.println("Error fetching work details: " + e.getMessage());
@@ -424,19 +476,15 @@ public class ApiService {
         int currentScore = 0;
         int newScore = 0;
 
-        // Check description (most important)
         if (!"No description available".equals(existingBook.getDescription())) currentScore += 5;
         if (!"No description available".equals(newBook.getDescription())) newScore += 5;
 
-        // Check genres
         if (existingBook.getGenre() != null && existingBook.getGenre().length > 0) currentScore += 3;
         if (newBook.getGenre() != null && newBook.getGenre().length > 0) newScore += 3;
 
-        // Check for publication year
         if (existingBook.getPublicationYear() != null && existingBook.getPublicationYear() > 0) currentScore += 2;
         if (newBook.getPublicationYear() != null && newBook.getPublicationYear() > 0) newScore += 2;
 
-        // Check cover
         if (!"/images/template.avif".equals(existingBook.getCoverURL())) currentScore += 1;
         if (!"/images/template.avif".equals(newBook.getCoverURL())) newScore += 1;
 
@@ -505,18 +553,21 @@ public class ApiService {
                                         new ParameterizedTypeReference<>() {
                                         }
                                 );
-
                                 Map<String, Object> workDetails = workDetailsResponse.getBody();
-                                if (workDetails != null && workDetails.containsKey("description")) {
-                                    Object desObj = workDetails.get("description");
-                                    String description = getDescription(desObj);
-                                    book = bookMapper.updateBookWithDescription(book, description);
-                                }
+                                if (workDetails != null) {
+                                    workDetailsCache.put("/works/" + workId, workDetails);
 
-                                if (workDetails != null && workDetails.containsKey("subtitle")) {
-                                    Object subObj = workDetails.get("subtitle");
-                                    String subtitle = getSubtitle(subObj);
-                                    book.setSubtitle(subtitle);
+                                    if (workDetails.containsKey("description")) {
+                                        Object desObj = workDetails.get("description");
+                                        String description = getDescription(desObj);
+                                        book = bookMapper.updateBookWithDescription(book, description);
+                                    }
+
+                                    if (workDetails.containsKey("subtitle")) {
+                                        Object subObj = workDetails.get("subtitle");
+                                        String subtitle = getSubtitle(subObj);
+                                        book.setSubtitle(subtitle);
+                                    }
                                 }
                             }
                         }
@@ -581,7 +632,6 @@ public class ApiService {
     }
 
     public String fetchDescriptionFromWorkId(String workId) {
-
         Map<String, Object> workDetails = fetchWorkDetails(workId);
         if (workDetails == null) {
             return null;
@@ -591,8 +641,7 @@ public class ApiService {
             return getDescription(desObj);
         }
 
-        return "No description availible";
-
+        return "No description available";
     }
 
     private String fetchAuthorName(String authorKey) {
@@ -616,67 +665,69 @@ public class ApiService {
         return null;
     }
 
-    private static List<String> getStrings(List<?> subjects) {
-        if (subjects == null || subjects.isEmpty()) return List.of("Fiction");  // Default genre
+    private List<String> getStrings(List<?> subjects) {
+        if (subjects == null || subjects.isEmpty()) return List.of("Fiction");
 
-        Set<String> commonGenres = Set.of(
-                "fiction", "fantasy", "science fiction", "mystery", "thriller",
-                "romance", "historical fiction", "young adult", "adventure",
-                "horror", "biography", "non-fiction", "history", "science",
-                "philosophy", "poetry", "drama", "comedy", "classic"
+        Set<String> primaryGenres = Set.of(
+                "fiction", "fantasy", "science fiction", "mystery", "thriller", "horror",
+                "romance", "historical fiction", "young adult", "adventure", "epic fantasy",
+                "biography", "non-fiction", "history", "science", "philosophy", "poetry",
+                "drama", "comedy", "classic", "crime", "dystopian", "urban fantasy",
+                "paranormal", "western", "memoir", "contemporary", "literary fiction",
+                "suspense", "gothic", "cyberpunk", "steampunk", "mythology", "fairy tale",
+                "folklore", "supernatural", "magical realism", "satire", "war", "espionage",
+                "action", "short stories", "graphic novel", "coming of age", "historical",
+                "political", "psychological", "alternate history", "post-apocalyptic"
         );
 
-
-        Set<String> specificTerms = Set.of(
-                "character", "battle", "war", "ring", "magic", "wizard", "dragon", "dwarf", "elf",
-                "goblin", "troll", "spider", "hobbit", "invisibility", "eagle", "thrush",
-                "pictorial", "specimen", "translation", "movable", "graphic", "juvenile",
-                "toy", "untranslated", "motion", "arkenstone", "five armies"
+        Set<String> genreModifiers = Set.of(
+                "epic", "dark", "high", "low", "historical", "urban", "contemporary",
+                "literary", "classic", "modern", "gothic", "hard", "soft", "military",
+                "paranormal", "erotic", "psychological", "philosophical", "political"
         );
 
-        List<String> priorityGenres = new ArrayList<>();
+        Set<String> exclusionTerms = Set.of(
+                "character", "battle", "seasons", "kings and rulers", "winter", "invierno",
+                "imaginary wars", "imaginary places", "award winner", "bestseller", "new york times",
+                "courts and courtiers", "civil war", "good and evil", "bien y mal"
+        );
+
+        List<String> potentialGenres = new ArrayList<>();
         for (Object subject : subjects) {
             if (subject instanceof String) {
-                String genre = ((String) subject).toLowerCase().trim();
-                if (commonGenres.contains(genre)) {
-                    priorityGenres.add(genre.substring(0, 1).toUpperCase() + genre.substring(1));
+                String genreStr = ((String) subject).toLowerCase().trim();
+
+                boolean shouldSkip = exclusionTerms.stream().anyMatch(genreStr::contains);
+                if (shouldSkip) continue;
+
+                if (primaryGenres.contains(genreStr)) {
+                    potentialGenres.add(genreStr);
+                }
+                else {
+                    for (String modifier : genreModifiers) {
+                        if (genreStr.contains(modifier)) {
+                            potentialGenres.add(genreStr);
+                            break;
+                        }
+                    }
                 }
             }
         }
-
-        if (!priorityGenres.isEmpty()) {
-            return priorityGenres.stream().limit(3).collect(Collectors.toList());
+        if (!potentialGenres.isEmpty()) {
+            return potentialGenres.stream()
+                    .distinct()
+                    .limit(5)
+                    .map(this::capitalizeFirstLetter)
+                    .collect(Collectors.toList());
         }
-
-        List<String> filterGenre = new ArrayList<>();
-        for (Object subject : subjects) {
-            if (subject instanceof String) {
-                String genre = ((String) subject).trim();
-                String lowerGenre = genre.toLowerCase();
-
-
-                if (genre.length() <= 5) continue;
-                if (specificTerms.stream().anyMatch(lowerGenre::contains)) continue;
-                if (lowerGenre.contains("protected daisy")) continue;
-                if (lowerGenre.contains("accessible book")) continue;
-                if (lowerGenre.contains("large type books")) continue;
-                if (lowerGenre.contains("library staff")) continue;
-                if (lowerGenre.contains("texts")) continue;
-                if (lowerGenre.contains("works")) continue;
-                if (lowerGenre.contains("awards")) continue;
-                if (lowerGenre.contains("fictitious character")) continue;
-
-                filterGenre.add(genre);
-
-                if (filterGenre.size() >= 3) break;
-            }
-        }
-
-        if (!filterGenre.isEmpty()) {
-            return filterGenre;
-        }
-
         return List.of("Fiction");
+    }
+
+    private String capitalizeFirstLetter(String input) {
+        if (input == null || input.isEmpty()) {
+            return input;
+        }
+        return input.substring(0, 1).toUpperCase() + input.substring(1);
     }
 
     private String normalizeIsbn(String isbn) {
@@ -713,43 +764,126 @@ public class ApiService {
 
     private List<Book> processSearchRequest(String searchUrl) {
         Map<String, Object> result = performSearchRequest(searchUrl);
-        if (result != null) {
-            ObjectMapper mapper = new ObjectMapper();
-            JsonNode jsonNode = mapper.valueToTree(result);
-            List<Book> books = extractBooksFromSearchResult(jsonNode);
-            return books.stream()
-                    .map(this::sanitizeBookFields)
-                    .collect(Collectors.toList());
+        if (result == null) return new ArrayList<>();
+
+        // Use a cached thread pool for parallel processing
+        ExecutorService executor = Executors.newFixedThreadPool(5);
+        ObjectMapper mapper = new ObjectMapper();
+        JsonNode jsonNode = mapper.valueToTree(result);
+
+        if (jsonNode == null || !jsonNode.has("docs")) return new ArrayList<>();
+        JsonNode docs = jsonNode.get("docs");
+
+        // Process only the top 20 results
+        int resultLimit = Math.min(20, docs.size());
+        List<Future<Book>> futures = new ArrayList<>();
+
+        for (int i = 0; i < resultLimit; i++) {
+            JsonNode doc = docs.get(i);
+            futures.add(executor.submit(() -> processBookDoc(doc, jsonNode)));
         }
-        return new ArrayList<>();
+
+        // Collect and filter results
+        List<Book> books = futures.stream()
+                .map(future -> {
+                    try {
+                        return future.get(3, TimeUnit.SECONDS);
+                    } catch (Exception e) {
+                        return null;
+                    }
+                })
+                .filter(Objects::nonNull)
+                .map(this::sanitizeBookFields)
+                .collect(Collectors.toList());
+
+        executor.shutdown();
+        return books;
     }
 
-    private String extractIsbnFromApiData(Map<String, Object> bookData) {
-        if (bookData == null) return "0000000000000";
-        if (bookData.containsKey("identifiers")) {
-            @SuppressWarnings("unchecked")
-            Map<String, Object> identifiers = (Map<String, Object>) bookData.get("identifiers");
+    private Book processBookDoc(JsonNode doc, JsonNode root) {
+        Book book = new Book();
 
-            if (identifiers.containsKey("isbn_13")) {
-                @SuppressWarnings("unchecked")
-                List<String> isbn13 = (List<String>) identifiers.get("isbn_13");
-                if (isbn13 != null && !isbn13.isEmpty()) {
-                    return normalizeIsbn(isbn13.getFirst());
-                }
-            }
+        book.setTitle(doc.has("title") ? doc.get("title").asText() : "Unknown Title");
+        book.setSubtitle("");
+        book.setDescription("No description available");
 
-            if (identifiers.containsKey("isbn_10")) {
-                @SuppressWarnings("unchecked")
-                List<String> isbn10 = (List<String>) identifiers.get("isbn_10");
-                if (isbn10 != null && !isbn10.isEmpty()) {
-                    return normalizeIsbn(isbn10.getFirst());
-                }
+        String author = extractAuthorFromDoc(doc);
+        book.setAuthor(author);
+
+
+        if (doc.has("cover_i")) {
+            book.setCoverURL("https://covers.openlibrary.org/b/id/" + doc.get("cover_i").asText() + "-M.jpg");
+        } else {
+            book.setCoverURL("/images/template.avif");
+        }
+
+        if (doc.has("first_publish_year")) {
+            book.setPublicationYear(doc.get("first_publish_year").asInt());
+        }
+
+        if (doc.has("subject") && doc.get("subject").isArray()) {
+            setGenresFromSubjects(doc.get("subject"), book);
+        }
+
+        String workKey = null;
+        if (doc.has("key") && doc.get("key").asText().startsWith("/works/")) {
+            workKey = doc.get("key").asText();
+        } else if (doc.has("works") && doc.get("works").isArray() && !doc.get("works").isEmpty()) {
+            JsonNode firstWork = doc.get("works").get(0);
+            if (firstWork.has("key")) {
+                workKey = firstWork.get("key").asText();
             }
         }
-        return generateIsbnFromKey(bookData.containsKey("key") ?
-                (String)bookData.get("key") : null);
-    }
 
+        if (workKey != null) {
+            try {
+                if (!workKey.startsWith("/works/")) {
+                    workKey = "/works/" + workKey.replace("/", "");
+                }
+
+                Map<String, Object> workDetails = workDetailsCache.get(workKey);
+                if (workDetails == null) {
+                    workDetails = fetchWorkDetails(workKey);
+                }
+
+                if (workDetails != null) {
+                    if (workDetails.containsKey("description")) {
+                        Object descObj = workDetails.get("description");
+                        String description = getDescription(descObj);
+                        if (description != null && !description.isEmpty()) {
+                            book.setDescription(description);
+                        }
+                    }
+
+                    if (workDetails.containsKey("subjects") &&
+                            (book.getGenre() == null || book.getGenre().length == 0)) {
+                        List<?> subjects = (List<?>) workDetails.get("subjects");
+                        List<String> genres = getStrings(subjects);
+                        if (!genres.isEmpty()) {
+                            book.setGenre(genres.toArray(new String[0]));
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                System.err.println("Error enhancing book details for work " + workKey + ": " + e.getMessage());
+            }
+        }
+
+        String isbn;
+        if (doc.has("isbn") && doc.get("isbn").isArray() && !doc.get("isbn").isEmpty()) {
+            isbn = normalizeIsbn(doc.get("isbn").get(0).asText());
+        } else {
+            isbn = workKey != null ? fetchIsbnFromWork(workKey) : "0000000000000";
+        }
+        book.setIsbn(isbn);
+
+        // Set API ID
+        book.setApiId(generateApiIdFromKey(workKey != null ? workKey :
+                (doc.has("key") ? doc.get("key").asText() : "unknown")));
+        book.setLastSync(LocalDateTime.now());
+
+        return book;
+    }
     /**
      * Truncates a string to a maximum length safely
      *
@@ -790,4 +924,77 @@ public class ApiService {
 
         return book;
     }
+
+    private String extractAuthorFromDoc(JsonNode doc) {
+        if (doc.has("author_name") && doc.get("author_name").isArray() && !doc.get("author_name").isEmpty()) {
+            StringBuilder authorBuilder = new StringBuilder();
+            JsonNode authorNodes = doc.get("author_name");
+            for (int i = 0; i < authorNodes.size(); i++) {
+                if (i > 0) authorBuilder.append(", ");
+                authorBuilder.append(authorNodes.get(i).asText());
+            }
+            return authorBuilder.toString();
+        }
+
+        if (doc.has("author_key") && doc.get("author_key").isArray() && !doc.get("author_key").isEmpty()) {
+            String authorKey = "/authors/" + doc.get("author_key").get(0).asText();
+            String authorName = fetchAuthorName(authorKey);
+            if (authorName != null) {
+                return authorName;
+            }
+        }
+
+        return "Unknown Author";
+    }
+
+    private void enhanceBookWithBasicDetails(Book book, Map<String, Object> workDetails) {
+        if (workDetails.containsKey("description")) {
+            Object descObj = workDetails.get("description");
+            String description = getDescription(descObj);
+            if (!description.isEmpty()) {
+                book.setDescription(description);
+            }
+        }
+
+        if (workDetails.containsKey("subjects") &&
+                (book.getGenre() == null || book.getGenre().length == 0)) {
+            List<?> subjects = (List<?>) workDetails.get("subjects");
+            List<String> genres = getStrings(subjects);
+            if (!genres.isEmpty()) {
+                book.setGenre(genres.toArray(new String[0]));
+            }
+        }
+    }
+
+    private String extractIsbnFromDoc(JsonNode doc) {
+        if (doc.has("isbn") && doc.get("isbn").isArray() && !doc.get("isbn").isEmpty()) {
+            return normalizeIsbn(doc.get("isbn").get(0).asText());
+        }
+
+        String workKey = extractWorkKeyFromDoc(doc);
+        if (workKey != null) {
+            if (workDetailsCache.containsKey(workKey)) {
+                Map<String, Object> details = workDetailsCache.get(workKey);
+                String isbn = extractIsbnFromWorkDetails(details);
+                if (isbn != null) return isbn;
+            }
+        }
+
+        return generateIsbnFromKey(workKey != null ? workKey :
+                (doc.has("key") ? doc.get("key").asText() : "unknown"));
+    }
+
+    private String extractWorkKeyFromDoc(JsonNode doc) {
+        if (doc.has("key") && doc.get("key").asText().startsWith("/works/")) {
+            return doc.get("key").asText();
+        }
+        if (doc.has("works") && doc.get("works").isArray() && !doc.get("works").isEmpty()) {
+            JsonNode firstWork = doc.get("works").get(0);
+            if (firstWork.has("key")) {
+                return firstWork.get("key").asText();
+            }
+        }
+        return null;
+    }
+
 }
