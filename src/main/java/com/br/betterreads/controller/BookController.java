@@ -4,6 +4,7 @@ import com.br.betterreads.model.Book;
 import com.br.betterreads.model.Review;
 import com.br.betterreads.model.User;
 import com.br.betterreads.repository.BookRepository;
+import com.br.betterreads.repository.CollectionRepository;
 import com.br.betterreads.repository.ReviewRepository;
 import com.br.betterreads.service.ApiService;
 import com.br.betterreads.service.BookService;
@@ -25,14 +26,16 @@ public class BookController {
     private final ApiService apiService;
     private final UserService userService;
     private final ReviewRepository reviewRepository;
+    private final CollectionRepository collectionRepository;
 
 
-    public BookController(BookService bookService, ApiService apiService, BookRepository bookRepo, UserService userService, ReviewRepository reviewRepository) {
+    public BookController(BookService bookService, ApiService apiService, BookRepository bookRepo, UserService userService, ReviewRepository reviewRepository, CollectionRepository collectionRepository) {
         this.bookService = bookService;
         this.apiService = apiService;
         this.bookRepo = bookRepo;
         this.userService = userService;
         this.reviewRepository = reviewRepository;
+        this.collectionRepository = collectionRepository;
     }
 
     @GetMapping("/search")
@@ -79,8 +82,15 @@ public class BookController {
             return "searchError";
         }
 
+        List<Review> reviews = reviewRepository.findByBook(book);
+        model.addAttribute("reviews", reviews);
+
         if (loggedInUser != null) {
             model.addAttribute("user", loggedInUser);
+
+            boolean inCollection = collectionRepository.findCollectionByUserAndBook(loggedInUser, book).isPresent();
+            model.addAttribute("inCollection", inCollection);
+
             Optional<Review> existingReviewOpt = Optional.ofNullable((Review) reviewRepository.getReviewByUserAndBook(loggedInUser, book));
             model.addAttribute("review", existingReviewOpt.orElse(new Review()));
         } else {

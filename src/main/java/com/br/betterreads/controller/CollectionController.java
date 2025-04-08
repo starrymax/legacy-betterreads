@@ -31,7 +31,7 @@ public class CollectionController {
         this.collectionRepository = collectionRepository;
     }
 
-    @PostMapping("/add-to-collection")
+    @PostMapping("/book/collection/add")
     public String addBookToCollection(@RequestParam String isbn,
                                       @RequestParam String status,
                                       HttpSession session,
@@ -50,6 +50,15 @@ public class CollectionController {
            ra.addFlashAttribute("error", result.errorMessage());
            return "redirect:/book?isbn=" + isbn;
         }
+        return "redirect:/book?isbn=" + isbn;
+    }
+
+    @PostMapping("/book/collection/remove")
+    public String removeBookFromCollection(@RequestParam String isbn, HttpSession session, RedirectAttributes ra) {
+        User user = userService.getLoggedInUser(session);
+        Book book = bookRepository.findByIsbn(isbn).getFirst();
+
+        collectionService.removeFromCollection(user, book);
         return "redirect:/book?isbn=" + isbn;
     }
 

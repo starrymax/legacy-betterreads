@@ -81,7 +81,7 @@
     </div>
 </div>
 <div class="review-section" th:if="${user != null}">
-    <form th:action="@{/book/review}" method="post">
+    <form th:action="@{/book/review/create}" method="post">
         <input type="hidden" name="bookIsbn" th:value="${book.isbn}">
 
         <div class="rating-group">
