@@ -71,16 +71,30 @@ public class IsbnService {
      * Clean up ISBN to be 13 characters only.
      */
     public String normalizeIsbn(String isbn) {
-        if (isbn == null) {
+        if (isbn == null || isbn.trim().isEmpty()) {
             return generateFallbackIsbn();
         }
         String cleaned = isbn.replaceAll("[^0-9X]", "");
-        if (cleaned.length() > 13) {
-            return cleaned.substring(0, 13);
-        } else if (cleaned.length() < 13) {
-            return cleaned + "0".repeat(13 - cleaned.length());
+        if (cleaned.length() == 13) {
+            return cleaned;
         }
-        return cleaned;
+
+        if (cleaned.length() == 10) {
+            String isbn13Base = "978" + cleaned.substring(0, 9);
+            int sum = 0;
+            for (int i = 0; i < isbn13Base.length(); i++) {
+                int digit = Character.getNumericValue(isbn13Base.charAt(i));
+                sum += (i % 2 == 0) ? digit : digit * 3;
+            }
+            int checkDigit = (10 - (sum % 10)) % 10;
+            return isbn13Base + checkDigit;
+        }
+
+        if (cleaned.length() > 8) {
+            return cleaned;
+        }
+
+        return generateFallbackIsbn();
     }
 
     public String generateFallbackIsbn() {
